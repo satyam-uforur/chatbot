@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat App</title>
+  <!-- Include the Socket.IO client library -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      color: #333;
+    }
+    #messages {
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 20px;
+      max-height: 400px;
+      overflow-y: scroll;
+    }
+    #username, #message-input {
+      padding: 10px;
+      width: 300px;
+      margin: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Chat App</h1>
+  
+  <!-- Username input and Join button -->
+  <input id="username" type="text" placeholder="Enter username" />
+  <button id="join-btn">Join Chat</button>
+  
+  <!-- Message input and Send button -->
+  <input id="message-input" type="text" placeholder="Type a message..." disabled />
+  <button id="send-btn" disabled>Send Message</button>
+  
+  <!-- Display messages -->
+  <div id="messages"></div>
+
+  <script>
+    const socket = io(); // Initialize Socket.IO
+
+    const usernameInput = document.getElementById('username');
+    const joinButton = document.getElementById('join-btn');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-btn');
+
+    // Listen for the join button click
+    joinButton.addEventListener('click', () => {
+      const username = usernameInput.value.trim();
+      if (username) {
+        socket.emit('join', username);  // Join the chat with the username
+        usernameInput.disabled = true;  // Disable username input after joining
+        joinButton.disabled = true;    // Disable join button
+        messageInput.disabled = false; // Enable message input
+        sendButton.disabled = false;   // Enable send button
+        usernameInput.value = '';      // Clear username input field
+      } else {
+        alert('Please enter a username');
+      }
+    });
+
+    // Listen for the send button click to send a message
+    sendButton.addEventListener('click', () => {
+      const message = messageInput.value.trim();
+      if (message) {
+        socket.emit('message', { from: usernameInput.value, content: message });
+        messageInput.value = '';  // Clear the input field after sending
+      } else {
+        alert('Please type a message');
+      }
+    });
+
+    // Listen for incoming messages and display them
+    socket.on('message', (message) => {
+      const messageElement = document.createElement('p');
+      messageElement.textContent = message;
+      document.getElementById('messages').appendChild(messageElement);
+    });
+  </script>
+</body>
+</html>
