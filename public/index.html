@@ -101,6 +101,20 @@
     .input-box button:hover {
       background-color: #5844b4;
     }
+    /* New button for download */
+    .download-btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      align-self: center;
+    }
+    .download-btn:hover {
+      background-color: #45a049;
+    }
   </style>
 </head>
 <body>
@@ -115,10 +129,13 @@
         <input type="text" id="user-input" placeholder="Enter a message...">
         <button onclick="sendMessage()">Send</button>
       </div>
+      <!-- Download Button -->
+      <button class="download-btn" onclick="downloadChat()">Download Chat</button>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const socket = io();
     const username = prompt("Enter your username:"); // Prompt for username
@@ -158,6 +175,36 @@
       if (message) {
         socket.emit('message', { from: username, content: message });
         input.value = '';
+      }
+    }
+
+    // Function to download chat as TXT or PDF
+    function downloadChat() {
+      const messages = document.querySelectorAll('.message');
+      let chatContent = '';
+      messages.forEach(msg => {
+        const username = msg.querySelector('p').innerText.split(':')[0];
+        const content = msg.querySelector('p').innerText.split(':')[1].trim();
+        const time = msg.querySelector('.time').innerText;
+        chatContent += `${username}: ${content} - ${time}\n`;
+      });
+
+      // Ask user for format
+      const format = prompt("Enter format: 'txt' for TXT or 'pdf' for PDF").toLowerCase();
+
+      if (format === 'txt') {
+        const blob = new Blob([chatContent], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'chat.txt';
+        link.click();
+      } else if (format === 'pdf') {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text(chatContent, 10, 10);
+        doc.save('chat.pdf');
+      } else {
+        alert("Invalid format. Please choose 'txt' or 'pdf'.");
       }
     }
   </script>
