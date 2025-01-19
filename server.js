@@ -2,54 +2,54 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 
-// Initialize express and the server
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Serve static files (your HTML, CSS, JS)
-app.use(express.static('public')); // Make sure your 'public' folder contains the HTML file
+app.use(express.static('public'));
 
-// Store all connected users
 let users = {};
 
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  // Listen for the "join" event to add the user
+  // Handle a new user joining the chat
   socket.on('join', (username) => {
-    // Store the username associated with the socket ID
     users[socket.id] = username;
     console.log(`${username} has joined the chat`);
-
-    // Send a welcome message to the user
-    socket.emit('message', `Welcome, ${username}!`);
-
-    // Notify all clients that a new user has joined
-    io.emit('message', `${username} has joined the chat.`);
+    socket.emit('message', { from: 'Server', content: `Welcome, ${username}!`, time: getCurrentTime() });
+    io.emit('message', { from: 'Server', content: `${username} has joined the chat.`, time: getCurrentTime() });
   });
 
-  // Listen for the "message" event from clients
+  // Handle incoming messages
   socket.on('message', (data) => {
     const { from, content } = data;
     console.log(`${from}: ${content}`);
-
-    // Broadcast the message to all clients
-    io.emit('message', `${from}: ${content}`);
+    io.emit('message', { from, content, time: getCurrentTime() });
   });
 
-  // Handle when a user disconnects
+  // Handle user disconnect
   socket.on('disconnect', () => {
     const username = users[socket.id];
     if (username) {
       console.log(`${username} disconnected`);
-      io.emit('message', `${username} has left the chat.`);
+      io.emit('message', { from: 'Server', content: `${username} has left the chat.`, time: getCurrentTime() });
     }
     delete users[socket.id];
   });
 });
 
-// Start the server
+// Helper function to get the current time in a formatted manner
+function getCurrentTime() {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const formattedHours = hours % 12 || 12;
+  const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+  return `${formattedHours}:${formattedMinutes} ${ampm}`;
+}
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
