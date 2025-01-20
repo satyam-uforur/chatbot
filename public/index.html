@@ -136,77 +136,91 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    const socket = io();
-    const username = prompt("Enter your username:"); // Prompt for username
-    socket.emit('join', username); // Send username to server
+  <script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  const socket = io();
+  const username = prompt("Enter your username:"); // Prompt for username
+  socket.emit('join', username); // Send username to server
 
-    function getCurrentTime() {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedHours = hours % 12 || 12;
-      const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-      return `${formattedHours}:${formattedMinutes} ${ampm}`;
-    }
+  function getCurrentTime() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+  }
 
-    // Listen for messages from the server
-    socket.on('message', (message) => {
+  // Listen for chat history and display it
+  socket.on('chatHistory', (messages) => {
+    messages.forEach(message => {
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('message');
-      
-      // Check if the message is from the current user or another user
       if (message.from === username) {
         messageDiv.classList.add('user-message');
       } else {
         messageDiv.classList.add('other-message');
       }
-      
-      // Display the message with the username and content
-      messageDiv.innerHTML = `<p><strong>${message.from}:</strong> ${message.content}</p><span class="time">${getCurrentTime()}</span>`;
+
+      messageDiv.innerHTML = `<p><strong>${message.from}:</strong> ${message.content}</p><span class="time">${new Date(message.timestamp).toLocaleTimeString()}</span>`;
       document.getElementById('chat-messages').appendChild(messageDiv);
-      document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+    });
+    document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  });
+
+  // Listen for new messages from the server
+  socket.on('message', (message) => {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    if (message.from === username) {
+      messageDiv.classList.add('user-message');
+    } else {
+      messageDiv.classList.add('other-message');
+    }
+    messageDiv.innerHTML = `<p><strong>${message.from}:</strong> ${message.content}</p><span class="time">${getCurrentTime()}</span>`;
+    document.getElementById('chat-messages').appendChild(messageDiv);
+    document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  });
+
+  function sendMessage() {
+    const input = document.getElementById('user-input');
+    const message = input.value.trim();
+    if (message) {
+      socket.emit('message', { from: username, content: message });
+      input.value = '';
+    }
+  }
+
+  function downloadChat() {
+    const messages = document.querySelectorAll('.message');
+    let chatContent = '';
+    messages.forEach(msg => {
+      const username = msg.querySelector('p').innerText.split(':')[0];
+      const content = msg.querySelector('p').innerText.split(':')[1].trim();
+      const time = msg.querySelector('.time').innerText;
+      chatContent += `${username}: ${content} - ${time}\n`;
     });
 
-    function sendMessage() {
-      const input = document.getElementById('user-input');
-      const message = input.value.trim();
-      if (message) {
-        socket.emit('message', { from: username, content: message });
-        input.value = '';
-      }
+    const format = prompt("Enter format: 'txt' for TXT or 'pdf' for PDF").toLowerCase();
+
+    if (format === 'txt') {
+      const blob = new Blob([chatContent], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'chat.txt';
+      link.click();
+    } else if (format === 'pdf') {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text(chatContent, 10, 10);
+      doc.save('chat.pdf');
+    } else {
+      alert("Invalid format. Please choose 'txt' or 'pdf'.");
     }
+  }
+</script>
 
-    // Function to download chat as TXT or PDF
-    function downloadChat() {
-      const messages = document.querySelectorAll('.message');
-      let chatContent = '';
-      messages.forEach(msg => {
-        const username = msg.querySelector('p').innerText.split(':')[0];
-        const content = msg.querySelector('p').innerText.split(':')[1].trim();
-        const time = msg.querySelector('.time').innerText;
-        chatContent += `${username}: ${content} - ${time}\n`;
-      });
-
-      // Ask user for format
-      const format = prompt("Enter format: 'txt' for TXT or 'pdf' for PDF").toLowerCase();
-
-      if (format === 'txt') {
-        const blob = new Blob([chatContent], { type: 'text/plain' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'chat.txt';
-        link.click();
-      } else if (format === 'pdf') {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text(chatContent, 10, 10);
-        doc.save('chat.pdf');
-      } else {
-        alert("Invalid format. Please choose 'txt' or 'pdf'.");
-      }
-    }
-  </script>
 </body>
 </html>
